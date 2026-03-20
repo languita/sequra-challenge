@@ -93,6 +93,7 @@ In addition to the import endpoints, the following REST API endpoints are availa
 - `GET /disbursements` - Get all disbursements
 - `POST /disbursements/process` - Manually trigger disbursement processing
 - `POST /disbursements/process/historical` - Process all pending historical orders using merchant frequency and commission rules
+- `POST /disbursements/process/historical/monthly-fees` - Backfill historical monthly minimum fee disbursements
 
 **Note:** Merchants and orders are loaded automatically on startup from CSV files. Duplicate records are skipped. The app stays running after loading.
 
@@ -102,17 +103,27 @@ If your orders are old (for example from 2023), run this once after imports/star
 
 `POST http://localhost:8080/disbursements/process/historical`
 
+Then run historical monthly minimum fee backfill:
+
+`POST http://localhost:8080/disbursements/process/historical/monthly-fees`
+
 Example with curl:
 
 ```bash
 curl -X POST http://localhost:8080/disbursements/process/historical
+curl -X POST http://localhost:8080/disbursements/process/historical/monthly-fees
 ```
 
-What it does:
+What the historical order process does:
 - Processes all `disbursed = false` orders
 - Applies merchant frequency (`DAILY` / `WEEKLY`)
 - Applies commission tiers
 - Creates disbursements and marks processed orders as `disbursed = true`
+
+What the historical monthly fee process does:
+- Reviews historical months with generated disbursements
+- Sums collected order fees per merchant and month
+- Creates one `monthlyFeeDisbursement = true` row when collected fees are below `minimumMonthlyFee`
 
 ### 6) How to manage all old data safely
 
@@ -120,16 +131,19 @@ Recommended one-time migration flow for large historical datasets (for example ~
 
 1. Start application with persistent DB enabled (`jdbc:h2:file:./data/sequra_db`).
 2. Import merchants first, then orders.
-3. Trigger historical processing once:
+3. Trigger historical order processing once:
 	- `POST /disbursements/process/historical`
-4. Verify results in DB:
+4. Trigger historical monthly fee processing once:
+	- `POST /disbursements/process/historical/monthly-fees`
+5. Verify results in DB:
 	- old orders should now have `disbursed = true`
 	- new rows should exist in `disbursement`
-5. Keep scheduler enabled for incremental daily/weekly/monthly processing.
+6. Keep scheduler enabled for incremental daily/weekly/monthly processing.
 
 Important behavior:
 - The historical endpoint is idempotent for already processed orders because it only processes `disbursed = false`.
 - If you call it again, it will process only newly imported pending orders.
+- The historical monthly fee endpoint creates backfilled monthly fee rows for past months after normal historical disbursements exist.
 - Monthly top-up disbursements are flagged with `monthlyFeeDisbursement = true`.
 
 Operational tips for big imports:
