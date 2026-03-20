@@ -43,4 +43,11 @@ public class DisbursementsController {
         int created = disbursementService.processHistoricalDisbursements();
         return "Historical disbursements processed successfully. Created: " + created;
     }
+
+    // POST to backfill historical monthly minimum fee disbursements
+    @PostMapping("/process/historical/monthly-fees")
+    public String processHistoricalMonthlyFees() {
+        int created = disbursementService.processHistoricalMonthlyTopUps();
+        return "Historical monthly fee disbursements processed successfully. Created: " + created;
+    }
 }

@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.*;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -69,33 +70,11 @@ public class DisbursementService {
     @Transactional
     public void processMonthlyTopUp() {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        LocalDate firstDayPrevMonth = today.minusMonths(1).withDayOfMonth(1);
-        LocalDate lastDayPrevMonth = firstDayPrevMonth.withDayOfMonth(firstDayPrevMonth.lengthOfMonth());
-
+        YearMonth previousMonth = YearMonth.from(today.minusMonths(1));
         List<Merchant> allMerchants = merchantRepository.findAll();
 
         for (Merchant merchant : allMerchants) {
-            BigDecimal totalDisbursed = disbursementRepository
-                    .findByMerchantAndDateBetween(merchant, firstDayPrevMonth, lastDayPrevMonth)
-                    .stream()
-                    .map(Disbursement::getAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            if (totalDisbursed.compareTo(merchant.getMinimumMonthlyFee()) < 0) {
-                BigDecimal topUp = merchant.getMinimumMonthlyFee().subtract(totalDisbursed);
-
-                Disbursement d = new Disbursement();
-                d.setMerchant(merchant);
-                d.setReference(buildDisbursementReference(merchant, today, true));
-                d.setOrderAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
-                d.setFeeAmount(topUp.setScale(2, RoundingMode.HALF_UP));
-                d.setAmount(topUp.setScale(2, RoundingMode.HALF_UP));
-                d.setDate(today); // o el último día del mes anterior
-                d.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
-                d.setMonthlyFeeDisbursement(true);
-
-                disbursementRepository.save(d);
-            }
+            createMonthlyTopUpForMonth(merchant, previousMonth);
         }
     }
 
@@ -121,29 +100,41 @@ public class DisbursementService {
         return createdDisbursements;
     }
 
+    /** HISTORICAL BACKFILL FOR MONTHLY MINIMUM FEES */
+    @Transactional
+    public int processHistoricalMonthlyTopUps() {
+        List<Merchant> allMerchants = merchantRepository.findAll();
+        int createdTopUps = 0;
+
+        for (Merchant merchant : allMerchants) {
+            List<YearMonth> monthsToProcess = disbursementRepository.findByMerchant(merchant).stream()
+                    .filter(d -> Boolean.FALSE.equals(d.getMonthlyFeeDisbursement()))
+                    .map(d -> YearMonth.from(d.getDate()))
+                    .distinct()
+                    .sorted(Comparator.naturalOrder())
+                    .toList();
+
+            for (YearMonth month : monthsToProcess) {
+                if (createMonthlyTopUpForMonth(merchant, month)) {
+                    createdTopUps++;
+                }
+            }
+        }
+
+        return createdTopUps;
+    }
+
     /** UTIL: procesar orders de un merchant entre fechas y marcar disbursed */
     private void processOrders(Merchant merchant, LocalDate start, LocalDate end) {
         List<Order> orders = orderRepository.findByMerchantAndDisbursedFalseAndCreatedAtBetween(
                 merchant, start, end
         );
 
-        if (orders.isEmpty()) return;
+        if (orders.isEmpty()) {
+            return;
+        }
 
-        DisbursementAmounts amounts = calculateDisbursementAmounts(orders);
-
-        Disbursement d = new Disbursement();
-        d.setMerchant(merchant);
-        d.setOrderAmount(amounts.orderAmount());
-        d.setFeeAmount(amounts.feeAmount());
-        d.setAmount(amounts.netAmount());
-        d.setDate(end); // puedes usar start o end según convenga
-        d.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
-        d.setMonthlyFeeDisbursement(false);
-
-        disbursementRepository.save(d);
-
-        orders.forEach(o -> o.setDisbursed(true));
-        orderRepository.saveAll(orders);
+        createDisbursementForOrders(merchant, orders, end);
     }
 
     private int processHistoricalDaily(Merchant merchant, List<Order> pendingOrders) {
@@ -199,6 +190,45 @@ public class DisbursementService {
             o.setDisbursed(true);
         });
         orderRepository.saveAll(orders);
+        return true;
+    }
+
+    private boolean createMonthlyTopUpForMonth(Merchant merchant, YearMonth month) {
+        if (merchant.getMinimumMonthlyFee() == null || merchant.getMinimumMonthlyFee().compareTo(BigDecimal.ZERO) <= 0) {
+            return false;
+        }
+
+        LocalDate firstDay = month.atDay(1);
+        LocalDate lastDay = month.atEndOfMonth();
+
+        boolean alreadyCreated = disbursementRepository.findByMerchantAndDateBetween(merchant, firstDay, lastDay).stream()
+                .anyMatch(d -> Boolean.TRUE.equals(d.getMonthlyFeeDisbursement()));
+        if (alreadyCreated) {
+            return false;
+        }
+
+        BigDecimal collectedFees = disbursementRepository.findByMerchantAndDateBetween(merchant, firstDay, lastDay).stream()
+                .filter(d -> Boolean.FALSE.equals(d.getMonthlyFeeDisbursement()))
+                .map(Disbursement::getFeeAmount)
+                .filter(fee -> fee != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        if (collectedFees.compareTo(merchant.getMinimumMonthlyFee()) >= 0) {
+            return false;
+        }
+
+        BigDecimal topUp = merchant.getMinimumMonthlyFee().subtract(collectedFees).setScale(2, RoundingMode.HALF_UP);
+        Disbursement d = new Disbursement();
+        d.setMerchant(merchant);
+        d.setReference(buildDisbursementReference(merchant, lastDay, true));
+        d.setOrderAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        d.setFeeAmount(topUp);
+        d.setAmount(topUp);
+        d.setDate(lastDay);
+        d.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
+        d.setMonthlyFeeDisbursement(true);
+        disbursementRepository.save(d);
         return true;
     }
 
