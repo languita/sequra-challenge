@@ -48,8 +48,9 @@ public class DataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        //loadMerchants();
-        //loadOrders();
+        // Comment this line if you want not to reload data on every startup (useful for development)
+        loadMerchants();
+        loadOrders();
     }
 
     public void loadOrders() throws Exception {
