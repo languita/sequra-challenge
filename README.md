@@ -31,7 +31,16 @@ Once the application is running, you can access the Swagger UI for interactive A
 
 `http://localhost:8080/swagger-ui/index.html`
 
-### 3) Import data via HTTP
+### 3) Data import (automatic via Loader)
+
+By default, merchants and orders are imported automatically at startup by `DataLoader` from:
+
+- `src/main/resources/merchants.csv`
+- `src/main/resources/orders.csv`
+
+The HTTP import endpoints are optional and can be used for manual reloads or custom datasets.
+
+### 3.1) Optional import via HTTP
 
 #### Merchants
 POST multipart to:
@@ -173,11 +182,9 @@ This includes endpoints for importing merchants and orders.
 
 The project includes a scheduler that triggers automatically (UTC timezone):
 
-- **Daily** (`11:15 UTC`, temporary) → processes yesterday’s orders for DAILY merchants
-- **Weekly** (`11:15 UTC`, temporary) → processes the past week for WEEKLY merchants based on their `live_on` day
-- **Monthly top-up** (`11:15 UTC`, temporary) → creates top-up entries to meet each merchant `minimum_monthly_fee`
-
-Note: original cron values are kept commented in scheduler code.
+- **Daily** (`08:00 UTC`) → processes yesterday’s orders for DAILY merchants
+- **Weekly** (`08:00 UTC`) → processes the past week for WEEKLY merchants based on their `live_on` day
+- **Monthly top-up** (`08:00 UTC` on day 1) → creates top-up entries to meet each merchant `minimum_monthly_fee`
 
 ## 💸 Disbursement Amount Fields
 
