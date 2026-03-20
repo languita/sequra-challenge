@@ -34,3 +34,8 @@ build/
 
 # Local persistent H2 database files
 data/
+
+# Local/tooling artifacts
+.github/java-upgrade/
+HELP.md
+
