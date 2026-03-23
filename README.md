@@ -211,7 +211,7 @@ mvn test
 ## 🔧 Notes
 
 - Merchant IDs are expected as **UUIDs** and Order IDs as **String** in CSVs.
-- Orders are marked as `disbursed` after being processed by the scheduler.
+- Orders are marked as `disbursed` after being processed by scheduled or manual/historical disbursement processing.
 - The scheduler uses UTC time and is enabled via `@EnableScheduling`.
 
 ## 🧠 Technical Choices
@@ -246,6 +246,8 @@ Decisions not taken:
 ## 📊 Yearly Reporting Table
 
 Final values computed from processed disbursement data:
+
+Note: yearly reporting is grouped by **disbursement date** (`disbursement.date`), not by order creation date.
 
 | Year | Number of disbursements | Amount disbursed to merchants | Amount of order fees | Number of monthly fees charged | Amount of monthly fees charged |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -283,6 +285,8 @@ AI tools were used as a productivity aid for:
 - Reviewing edge cases and reporting requirements.
 
 All generated output was reviewed and adapted manually, and final implementation decisions were taken based on challenge requirements.
+
+Full prompt history: `AI_PROMPTS_LOG.md`.
 
 ---
 
