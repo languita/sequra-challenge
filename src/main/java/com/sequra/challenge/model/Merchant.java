@@ -13,10 +13,10 @@ import jakarta.persistence.Id;
 public class Merchant {
 
     @Id
-    private UUID id; // cambiar a UUID
+    private UUID id;
     private String reference;
     private String email;
-    private LocalDate liveOn; // fecha, solo usada para weekly merchants
+    private LocalDate liveOn; // only relevant for weekly merchants (start date)
     
     @Enumerated(EnumType.STRING)
     private PaymentFrequency paymentFrequency; // DAILY / WEEKLY

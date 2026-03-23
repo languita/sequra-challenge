@@ -17,7 +17,7 @@ public class DisbursementScheduler {
         disbursementService.processDailyDisbursements();
     }
 
-    // Weekly job: 08:00 UTC, se filtra dentro del servicio por liveOn
+    // Weekly job: 08:00 UTC, filtered inside the service by merchant liveOn day
     @Scheduled(cron = "0 0 8 * * *", zone = "UTC")
     public void weeklyJob() {
         disbursementService.processWeeklyDisbursements();

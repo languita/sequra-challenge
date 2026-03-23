@@ -15,19 +15,19 @@ import java.time.LocalDate;
 public class Order {
 
     @Id
-    private String id; // del CSV
+    private String id;
 
     @ManyToOne
     @JoinColumn(name = "merchant_id")
-    private Merchant merchant; // para relacionar con Merchant
+    private Merchant merchant;
 
 	@ManyToOne
 	@JoinColumn(name = "disbursement_id")
 	private Disbursement disbursement;
 
     private BigDecimal amount;
-    private LocalDate createdAt; // fecha del pedido
-    private Boolean disbursed = false; // inicialmente no procesado
+    private LocalDate createdAt;
+    private Boolean disbursed = false;
     
 	public String getId() {
 		return id;

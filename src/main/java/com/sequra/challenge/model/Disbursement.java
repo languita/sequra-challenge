@@ -31,7 +31,7 @@ public class Disbursement {
 
     private BigDecimal amount;
 
-    private LocalDate date; // día o fin de semana
+    private LocalDate date; // day or end-of-week date
 
     private LocalDateTime createdAt;
 

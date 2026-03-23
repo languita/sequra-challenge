@@ -10,7 +10,7 @@ import com.sequra.challenge.model.Order;
 
 public interface OrderRepository extends JpaRepository<Order, String> {
 
-    // Orders completadas y no disbursed
+    // Completed orders not yet disbursed
 	List<Order> findByMerchantAndDisbursedFalseAndCreatedAtBetween(
 	        Merchant merchant,
 	        LocalDate start,

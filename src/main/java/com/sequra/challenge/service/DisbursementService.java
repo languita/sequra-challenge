@@ -58,7 +58,7 @@ public class DisbursementService {
 
         for (Merchant merchant : weeklyMerchants) {
             if (merchant.getLiveOn() != null && merchant.getLiveOn().getDayOfWeek() == today.getDayOfWeek()) {
-                // semana pasada
+                // previous week
                 LocalDate startOfWeek = today.minusWeeks(1).with(DayOfWeek.MONDAY);
                 LocalDate endOfWeek = startOfWeek.plusDays(6);
                 processOrders(merchant, startOfWeek, endOfWeek);
@@ -124,7 +124,7 @@ public class DisbursementService {
         return createdTopUps;
     }
 
-    /** UTIL: procesar orders de un merchant entre fechas y marcar disbursed */
+    /** Processes orders for a merchant within a date range and marks them as disbursed. */
     private void processOrders(Merchant merchant, LocalDate start, LocalDate end) {
         List<Order> orders = orderRepository.findByMerchantAndDisbursedFalseAndCreatedAtBetween(
                 merchant, start, end

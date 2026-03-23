@@ -10,9 +10,9 @@ import java.util.UUID;
 
 public interface MerchantRepository extends JpaRepository<Merchant, UUID> {
 
-    // Buscar merchants por referencia (para orders import)
+    // Find a merchant by reference (used during orders import)
     Optional<Merchant> findByReference(String reference);
 
-    // Buscar merchants por frecuencia de pago (daily / weekly)
+    // Find merchants by payment frequency (daily / weekly)
     List<Merchant> findByPaymentFrequency(PaymentFrequency paymentFrequency);
 }

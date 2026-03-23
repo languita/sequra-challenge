@@ -11,6 +11,6 @@ public interface DisbursementRepository extends JpaRepository<Disbursement, Long
 
     List<Disbursement> findByMerchant(Merchant merchant);
 
-    // Buscar disbursements de un merchant entre fechas (daily, weekly o monthly top-up)
+    // Find disbursements for a merchant between two dates (daily, weekly, or monthly top-up)
     List<Disbursement> findByMerchantAndDateBetween(Merchant merchant, LocalDate start, LocalDate end);
 }
